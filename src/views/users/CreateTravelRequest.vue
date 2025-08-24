@@ -17,54 +17,80 @@
       </header>
 
       <form class="form" @submit.prevent="handleSubmit" novalidate>
-        <div class="destination-search">
-          <div class="search-input-wrapper">
+        <div class="main-form-row">
+          <div class="destination-section">
+            <div class="search-input-wrapper">
+              <BaseInput
+                id="destination_search"
+                v-model="searchQuery"
+                label="Local de destino"
+                type="text"
+                placeholder="Digite o nome da cidade ou local"
+                autocomplete="off"
+                required
+                :error="errors.name"
+                @input="handleSearchInput"
+                @blur="handleBlur('destination_search')"
+              />
+            </div>
+
+            <div v-if="showDropdown" class="search-dropdown">
+              <div v-if="searchLoading" class="search-loading-state">
+                <svg class="loading-spinner" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle
+                    class="spinner-circle"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    fill="none"
+                  />
+                </svg>
+                <span class="loading-text">Buscando destinos...</span>
+              </div>
+
+              <div
+                v-else-if="searchResults.length > 0"
+                v-for="(result, index) in searchResults"
+                :key="result.place_id"
+                class="search-result-item"
+                @click="selectDestination(result)"
+              >
+                <div class="result-name">{{ result.name }}</div>
+                <div class="result-details">
+                  {{ formatDestinationAddress(result.address) }}
+                </div>
+              </div>
+
+              <div v-else-if="!searchLoading && searchQuery.trim()" class="no-results">
+                <span class="no-results-text">Nenhum destino encontrado</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dates-section">
             <BaseInput
-              id="destination_search"
-              v-model="searchQuery"
-              label="Local de destino (Nome da viagem)"
-              type="text"
-              placeholder="Digite o nome da cidade ou local"
-              autocomplete="off"
+              id="departure_date"
+              v-model="formData.departure_date"
+              label="Data de partida"
+              type="date"
               required
-              :error="errors.name"
-              @input="handleSearchInput"
-              @blur="handleBlur('destination_search')"
+              :error="errors.departure_date"
+              @blur="handleBlur('departure_date')"
             />
           </div>
 
-          <div v-if="showDropdown" class="search-dropdown">
-            <div v-if="searchLoading" class="search-loading-state">
-              <svg class="loading-spinner" viewBox="0 0 24 24" aria-hidden="true">
-                <circle
-                  class="spinner-circle"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  fill="none"
-                />
-              </svg>
-              <span class="loading-text">Buscando destinos...</span>
-            </div>
-
-            <div
-              v-else-if="searchResults.length > 0"
-              v-for="(result, index) in searchResults"
-              :key="result.place_id"
-              class="search-result-item"
-              @click="selectDestination(result)"
-            >
-              <div class="result-name">{{ result.name }}</div>
-              <div class="result-details">
-                {{ formatDestinationAddress(result.address) }}
-              </div>
-            </div>
-
-            <div v-else-if="!searchLoading && searchQuery.trim()" class="no-results">
-              <span class="no-results-text">Nenhum destino encontrado</span>
-            </div>
+          <div class="dates-section">
+            <BaseInput
+              id="return_date"
+              v-model="formData.return_date"
+              label="Data de retorno"
+              type="date"
+              required
+              :error="errors.return_date"
+              @blur="handleBlur('return_date')"
+            />
           </div>
         </div>
 
@@ -72,37 +98,17 @@
           <h3 class="details-title">Detalhes do Destino</h3>
           <div class="details-content">
             <div class="detail-item">
-              <span class="detail-label">Cidade:</span>
+              <span class="detail-label">Destino:</span>
               <span class="detail-value">{{ selectedDestination.name }}</span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Localização:</span>
+              <span class="detail-label">Detalhes da Localização:</span>
               <span class="detail-value">{{
                 formatDestinationAddress(selectedDestination.address)
               }}</span>
             </div>
           </div>
         </div>
-
-        <BaseInput
-          id="departure_date"
-          v-model="formData.departure_date"
-          label="Data de partida"
-          type="date"
-          required
-          :error="errors.departure_date"
-          @blur="handleBlur('departure_date')"
-        />
-
-        <BaseInput
-          id="return_date"
-          v-model="formData.return_date"
-          label="Data de retorno"
-          type="date"
-          required
-          :error="errors.return_date"
-          @blur="handleBlur('return_date')"
-        />
 
         <div class="form-actions">
           <BaseButton type="button" variant="outline" @click="handleCancel" :disabled="loading">
@@ -347,7 +353,7 @@ const handleBlur = (field: string) => {
 
 .card {
   width: 100%;
-  max-width: 480px;
+  max-width: 720px;
   background: #ffffff;
   border: 1px solid var(--color-border);
   border-radius: 16px;
@@ -393,7 +399,7 @@ const handleBlur = (field: string) => {
 }
 
 .form {
-  padding: 0 28px 28px;
+  padding: 0 32px 32px;
 }
 
 .form-actions {
@@ -437,6 +443,7 @@ const handleBlur = (field: string) => {
   overflow-y: auto;
   z-index: 1000;
   margin-top: 4px;
+  width: 100%;
 }
 
 .search-result-item {
@@ -510,6 +517,29 @@ const handleBlur = (field: string) => {
   color: #6b7280;
 }
 
+/* Main form row layout */
+.main-form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.destination-section {
+  flex: 2;
+  min-width: 0;
+  position: relative;
+}
+
+.dates-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.dates-section .field {
+  margin-bottom: 0;
+}
+
 /* Destination details styles */
 .destination-details {
   background: #f9fafb;
@@ -547,6 +577,20 @@ const handleBlur = (field: string) => {
 .detail-value {
   color: #111827;
   font-weight: 500;
+}
+
+/* Remove old dates-row styles */
+.dates-row {
+  display: none;
+}
+
+.dates-row .field {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.dates-row .field:last-child {
+  margin-bottom: 0;
 }
 
 @keyframes spin {
