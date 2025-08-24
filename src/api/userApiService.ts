@@ -1,104 +1,87 @@
 import { apiService } from './apiService'
 
-// Interfaces para tipagem
-export interface LoginRequest {
+export interface UserLoginForm {
   email: string
   password: string
-}
-
-export interface RegisterRequest {
-  name: string
-  email: string
-  password: string
-  password_confirmation: string
-}
-
-export interface User {
-  id: number
-  name: string
-  email: string
-  email_verified_at: string | null
-  created_at: string
-  updated_at: string
 }
 
 export interface LoginResponse {
   success: boolean
   message: string
   data: {
-    user: User
     token: string
-    token_type: string
+    user: {
+      id: number
+      name: string
+      email: string
+    }
   }
+}
+
+export interface UserRegisterForm {
+  name: string
+  email: string
+  password: string
+  password_confirmation: string
 }
 
 export interface RegisterResponse {
   success: boolean
   message: string
   data: {
-    user: User
     token: string
-    token_type: string
+    user: {
+      id: number
+      name: string
+      email: string
+    }
   }
 }
 
 export interface ApiError {
-  success: false
+  success: boolean
   message: string
   errors?: Record<string, string[]>
 }
 
-// Function to login user
-export const userLogin = async (credentials: LoginRequest): Promise<LoginResponse> => {
-  try {
-    const requestData = {
-      email: credentials.email.trim(),
-      password: credentials.password,
-    }
+// Helper function to handle API errors
+const handleApiError = (error: any): never => {
+  if (error.response?.data) {
+    throw error.response.data
+  }
 
-    const response = await apiService.post<LoginResponse>('/user/login', requestData)
+  throw {
+    success: false,
+    message: 'Erro de conexão. Verifique sua internet e tente novamente.',
+  }
+}
+
+// Function to login user
+export const userLogin = async (credentials: UserLoginForm): Promise<LoginResponse> => {
+  try {
+    const response = await apiService.post<LoginResponse>('/user/login', credentials)
     return response.data
   } catch (error: any) {
-    if (error.response?.data) {
-      throw error.response.data
-    }
-
-    throw {
-      success: false,
-      message: 'Erro de conexão. Verifique sua internet e tente novamente.',
-    } as ApiError
+    return handleApiError(error)
   }
 }
 
 // Function to register user
-export const userRegister = async (userData: RegisterRequest): Promise<RegisterResponse> => {
+export const userRegister = async (userData: UserRegisterForm): Promise<RegisterResponse> => {
   try {
-    const requestData = {
-      name: userData.name.trim(),
-      email: userData.email.trim(),
-      password: userData.password,
-      password_confirmation: userData.password_confirmation,
-    }
-
-    const response = await apiService.post<RegisterResponse>('/user/register', requestData)
+    const response = await apiService.post<RegisterResponse>('/user/register', userData)
     return response.data
   } catch (error: any) {
-    if (error.response?.data) {
-      throw error.response.data
-    }
-
-    throw {
-      success: false,
-      message: 'Erro de conexão. Verifique sua internet e tente novamente.',
-    } as ApiError
+    return handleApiError(error)
   }
 }
 
-// Function to logout
-export const userLogout = async (): Promise<void> => {
+// Function to logout user
+export const userLogout = async (): Promise<{ success: boolean; message: string }> => {
   try {
-    await apiService.post('/user/logout')
+    const response = await apiService.post<{ success: boolean; message: string }>('/user/logout')
+    return response.data
   } catch (error: any) {
-    console.warn('Erro ao fazer logout no servidor:', error)
+    return handleApiError(error)
   }
 }
