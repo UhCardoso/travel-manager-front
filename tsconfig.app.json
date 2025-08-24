@@ -9,7 +9,6 @@
     "noEmit": true,
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "paths": {
       "@/*": ["./src/*"]
