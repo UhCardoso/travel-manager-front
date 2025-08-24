@@ -60,14 +60,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { userLoginSchema, validateForm, type UserLoginForm } from '@/utils/validation'
 import { BaseInput, BaseButton } from '@/components/ui'
 import { userLogin, type LoginResponse, type ApiError } from '@/api/userApiService'
+import { useAuthStore } from '@/stores/auth'
 
+const router = useRouter()
+const authStore = useAuthStore()
 const formData = reactive<UserLoginForm>({ email: '', password: '' })
 const loading = ref(false)
 const errors = reactive<Record<string, string>>({})
+
+// Check if already logged in when loading the page
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    router.push('/users/travel-requests')
+  }
+})
 
 const validateField = async (field: keyof UserLoginForm) => {
   try {
@@ -97,8 +108,8 @@ const handleLogin = async () => {
     })
 
     if (response.success) {
-      localStorage.setItem('authToken', response.data.token)
-      localStorage.setItem('userData', JSON.stringify(response.data.user))
+      authStore.setAuth(response.data.token, response.data.user)
+      router.push('/users/travel-requests')
     }
   } catch (error: any) {
     const apiError = error as ApiError
