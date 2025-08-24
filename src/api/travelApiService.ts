@@ -28,13 +28,58 @@ export interface TravelRequest {
 export interface CreateTravelResponse {
   success: boolean
   message: string
+}
+
+export interface TravelRequestsResponse {
+  success: boolean
+  message: string
+  data: {
+    data: TravelRequest[]
+    links: {
+      first: string
+      last: string
+      prev: string | null
+      next: string | null
+    }
+    meta: {
+      current_page: number
+      from: number
+      last_page: number
+      per_page: number
+      to: number
+      total: number
+    }
+  }
+}
+
+export interface CancelTravelRequestResponse {
+  success: boolean
+  message: string
+  data: TravelRequest
+}
+
+export interface TravelRequestDetailsResponse {
+  success: boolean
+  message: string
   data: TravelRequest
 }
 
 export interface ApiError {
-  success: false
+  success: boolean
   message: string
   errors?: Record<string, string[]>
+}
+
+// Helper function to handle API errors
+const handleApiError = (error: any): never => {
+  if (error.response?.data) {
+    throw error.response.data
+  }
+
+  throw {
+    success: false,
+    message: 'Erro de conexão. Verifique sua internet e tente novamente.',
+  }
 }
 
 // Function to create travel request
@@ -58,32 +103,49 @@ export const createTravelRequest = async (
     )
     return response.data
   } catch (error: any) {
-    if (error.response?.data) {
-      throw error.response.data
-    }
-
-    throw {
-      success: false,
-      message: 'Erro de conexão. Verifique sua internet e tente novamente.',
-    } as ApiError
+    return handleApiError(error)
   }
 }
 
-// Function to get travel requests
-export const getTravelRequests = async (): Promise<{ success: boolean; data: TravelRequest[] }> => {
+// Function to get all travel requests for the user
+export const getUserTravelRequests = async (params?: {
+  page?: number
+}): Promise<TravelRequestsResponse> => {
   try {
-    const response = await apiService.get<{ success: boolean; data: TravelRequest[] }>(
-      '/user/travel-requests'
+    const queryParams = params?.page ? `?page=${params.page}` : ''
+    const response = await apiService.get<TravelRequestsResponse>(
+      `/user/travel-request/all${queryParams}`
     )
     return response.data
   } catch (error: any) {
-    if (error.response?.data) {
-      throw error.response.data
-    }
+    return handleApiError(error)
+  }
+}
 
-    throw {
-      success: false,
-      message: 'Erro ao buscar solicitações de viagem.',
-    } as ApiError
+// Function to cancel travel request
+export const cancelTravelRequest = async (
+  requestId: number
+): Promise<CancelTravelRequestResponse> => {
+  try {
+    const response = await apiService.patch<CancelTravelRequestResponse>(
+      `/user/travel-request/${requestId}/cancel`
+    )
+    return response.data
+  } catch (error: any) {
+    return handleApiError(error)
+  }
+}
+
+// Function to get travel request details
+export const getTravelRequestDetails = async (
+  requestId: number
+): Promise<TravelRequestDetailsResponse> => {
+  try {
+    const response = await apiService.get<TravelRequestDetailsResponse>(
+      `/user/travel-request/${requestId}/details`
+    )
+    return response.data
+  } catch (error: any) {
+    return handleApiError(error)
   }
 }
