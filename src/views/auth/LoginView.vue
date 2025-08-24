@@ -46,6 +46,13 @@
         </BaseButton>
 
         <p v-if="errors.general" class="error-general">{{ errors.general }}</p>
+
+        <div class="register-section">
+          <p class="register-text">
+            Não tem uma conta?
+            <router-link to="/register" class="link-strong">Registre-se aqui</router-link>
+          </p>
+        </div>
       </form>
 
       <footer class="footer">
@@ -203,6 +210,17 @@ const handleBlur = (field: keyof UserLoginForm) => validateField(field)
   background: #fef2f2;
   border: 1px solid #fecaca;
   border-radius: 8px;
+}
+
+.register-section {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.register-text {
+  color: #374151;
+  font-size: 14px;
+  margin: 0;
 }
 
 .row {

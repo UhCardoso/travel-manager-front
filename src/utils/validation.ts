@@ -10,6 +10,27 @@ export const userLoginSchema = yup.object({
     .trim(),
 })
 
+// User registration validation schema
+export const userRegisterSchema = yup.object({
+  name: yup
+    .string()
+    .required('Nome é obrigatório')
+    .min(3, 'Nome deve ter pelo menos 3 caracteres')
+    .max(100, 'Nome deve ter no máximo 100 caracteres')
+    .trim(),
+  email: yup.string().required('Email é obrigatório').email('Digite um email válido').trim(),
+  password: yup
+    .string()
+    .required('Senha é obrigatória')
+    .min(6, 'Senha deve ter pelo menos 6 caracteres')
+    .trim(),
+  password_confirmation: yup
+    .string()
+    .required('Confirmação de senha é obrigatória')
+    .oneOf([yup.ref('password')], 'As senhas devem ser iguais')
+    .trim(),
+})
+
 // Admin login validation schema
 export const adminLoginSchema = yup.object({
   email: yup
@@ -26,6 +47,7 @@ export const adminLoginSchema = yup.object({
 
 // Inferred types from schemas
 export type UserLoginForm = yup.InferType<typeof userLoginSchema>
+export type UserRegisterForm = yup.InferType<typeof userRegisterSchema>
 export type AdminLoginForm = yup.InferType<typeof adminLoginSchema>
 
 // Utility function to validate forms

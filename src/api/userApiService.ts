@@ -6,6 +6,13 @@ export interface LoginRequest {
   password: string
 }
 
+export interface RegisterRequest {
+  name: string
+  email: string
+  password: string
+  password_confirmation: string
+}
+
 export interface User {
   id: number
   name: string
@@ -16,6 +23,16 @@ export interface User {
 }
 
 export interface LoginResponse {
+  success: boolean
+  message: string
+  data: {
+    user: User
+    token: string
+    token_type: string
+  }
+}
+
+export interface RegisterResponse {
   success: boolean
   message: string
   data: {
@@ -40,6 +57,30 @@ export const userLogin = async (credentials: LoginRequest): Promise<LoginRespons
     }
 
     const response = await apiService.post<LoginResponse>('/user/login', requestData)
+    return response.data
+  } catch (error: any) {
+    if (error.response?.data) {
+      throw error.response.data
+    }
+
+    throw {
+      success: false,
+      message: 'Erro de conexão. Verifique sua internet e tente novamente.',
+    } as ApiError
+  }
+}
+
+// Function to register user
+export const userRegister = async (userData: RegisterRequest): Promise<RegisterResponse> => {
+  try {
+    const requestData = {
+      name: userData.name.trim(),
+      email: userData.email.trim(),
+      password: userData.password,
+      password_confirmation: userData.password_confirmation,
+    }
+
+    const response = await apiService.post<RegisterResponse>('/user/register', requestData)
     return response.data
   } catch (error: any) {
     if (error.response?.data) {

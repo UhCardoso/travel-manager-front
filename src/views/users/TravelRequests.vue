@@ -2,7 +2,10 @@
   <div class="travel-requests">
     <header class="header">
       <h1>Solicitações de Viagem</h1>
-      <BaseButton variant="outline" @click="handleLogout" :loading="loading"> Sair </BaseButton>
+      <div class="header-actions">
+        <BaseButton variant="primary" @click="handleCreateTravel">Nova Viagem</BaseButton>
+        <BaseButton variant="outline" @click="handleLogout" :loading="loading">Sair</BaseButton>
+      </div>
     </header>
 
     <main class="content">
@@ -28,6 +31,11 @@ onMounted(() => {
     router.push('/')
   }
 })
+
+// Create travel request function
+const handleCreateTravel = () => {
+  router.push('/users/create-travel-request')
+}
 
 // Logout function
 const handleLogout = async () => {
@@ -68,6 +76,12 @@ const handleLogout = async () => {
   font-weight: 600;
   color: #111827;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
 }
 
 .content {
