@@ -12,15 +12,15 @@
           <h1 class="brand-title">Travel Manager</h1>
         </div>
 
-        <h2 class="title">Acesso Administrativo</h2>
-        <p class="subtitle">Entre como administrador do sistema</p>
+        <h2 class="title">Acesso administrativo</h2>
+        <p class="subtitle">Entre para gerenciar os pedidos de viagens</p>
       </header>
 
       <form class="form" @submit.prevent="handleAdminLogin" novalidate>
         <BaseInput
           id="email"
           v-model="formData.email"
-          label="Email Administrativo"
+          label="Email"
           type="email"
           placeholder="admin@admin.com"
           autocomplete="email"
@@ -32,7 +32,7 @@
         <BaseInput
           id="password"
           v-model="formData.password"
-          label="Senha Administrativa"
+          label="Senha"
           type="password"
           placeholder="••••••••"
           autocomplete="current-password"
@@ -62,13 +62,9 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { adminLoginSchema, validateForm, type AdminLoginForm } from '@/utils/validation'
 import { BaseInput, BaseButton } from '@/components/ui'
-import {
-  adminLogin,
-  type AdminLoginForm,
-  type AdminLoginResponse,
-  type ApiError,
-} from '@/api/adminApiService'
+import { adminLogin, type AdminLoginResponse } from '@/api/adminApiService'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -86,24 +82,17 @@ onMounted(() => {
 
 const validateField = async (field: keyof AdminLoginForm) => {
   try {
-    // Validação simples para admin
-    if (field === 'email' && !formData.email) {
-      errors.email = 'Email é obrigatório'
-    } else if (field === 'password' && !formData.password) {
-      errors.password = 'Senha é obrigatória'
-    } else {
-      delete errors[field]
-    }
+    await adminLoginSchema.validateAt(field, formData)
+    delete errors[field]
   } catch (err: any) {
     errors[field] = err.message
   }
 }
 
 const validateFormData = async () => {
-  errors.email = formData.email ? '' : 'Email é obrigatório'
-  errors.password = formData.password ? '' : 'Senha é obrigatória'
-
-  return !errors.email && !errors.password
+  const result = await validateForm(adminLoginSchema, formData)
+  if (!result.isValid) Object.assign(errors, result.errors)
+  return result.isValid
 }
 
 const handleAdminLogin = async () => {
@@ -123,15 +112,20 @@ const handleAdminLogin = async () => {
       router.push('/admin/travel-requests')
     }
   } catch (error: any) {
-    const apiError = error as ApiError
-    console.log('Erro capturado no AdminLoginView:', apiError)
+    const apiError = error as any
 
     if (apiError.errors && Object.keys(apiError.errors).length > 0) {
+      let hasFieldErrors = false
       Object.keys(apiError.errors).forEach(field => {
         if (field in formData) {
           errors[field as keyof AdminLoginForm] = apiError.errors![field][0]
+          hasFieldErrors = true
         }
       })
+
+      if (!hasFieldErrors && apiError.errors.message) {
+        errors.general = apiError.errors.message[0]
+      }
     } else if (apiError.message) {
       errors.general = apiError.message
     } else {

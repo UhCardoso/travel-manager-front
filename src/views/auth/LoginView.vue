@@ -124,14 +124,19 @@ const handleLogin = async () => {
     }
   } catch (error: any) {
     const apiError = error as ApiError
-    console.log('Erro capturado no LoginView:', apiError)
 
     if (apiError.errors && Object.keys(apiError.errors).length > 0) {
+      let hasFieldErrors = false
       Object.keys(apiError.errors).forEach(field => {
         if (field in formData) {
           errors[field as keyof UserLoginForm] = apiError.errors![field][0]
+          hasFieldErrors = true
         }
       })
+
+      if (!hasFieldErrors && apiError.errors.message) {
+        errors.general = apiError.errors.message[0]
+      }
     } else if (apiError.message) {
       errors.general = apiError.message
     } else {
