@@ -12,17 +12,17 @@
           <h1 class="brand-title">Travel Manager</h1>
         </div>
 
-        <h2 class="title">Bem-vindo de volta</h2>
-        <p class="subtitle">Entre para gerenciar suas viagens corporativas</p>
+        <h2 class="title">Acesso Administrativo</h2>
+        <p class="subtitle">Entre como administrador do sistema</p>
       </header>
 
-      <form class="form" @submit.prevent="handleLogin" novalidate>
+      <form class="form" @submit.prevent="handleAdminLogin" novalidate>
         <BaseInput
           id="email"
           v-model="formData.email"
-          label="Email"
+          label="Email Administrativo"
           type="email"
-          placeholder="seu@email.com"
+          placeholder="admin@admin.com"
           autocomplete="email"
           required
           :error="errors.email"
@@ -32,7 +32,7 @@
         <BaseInput
           id="password"
           v-model="formData.password"
-          label="Senha"
+          label="Senha Administrativa"
           type="password"
           placeholder="••••••••"
           autocomplete="current-password"
@@ -42,24 +42,17 @@
         />
 
         <BaseButton type="submit" variant="primary" :loading="loading" :full-width="true">
-          {{ loading ? 'Entrando...' : 'Entrar no sistema' }}
+          {{ loading ? 'Entrando...' : 'Acessar como Admin' }}
         </BaseButton>
 
         <p v-if="errors.general" class="error-general">{{ errors.general }}</p>
-
-        <div class="register-section">
-          <p class="register-text">
-            Não tem uma conta?
-            <router-link to="/register" class="link-strong">Registre-se aqui</router-link>
-          </p>
-        </div>
       </form>
 
       <footer class="footer">
         <div class="divider"><span>ou</span></div>
         <p class="footnote">
-          Precisa de acesso administrativo?
-          <router-link to="/admin" class="link-strong">Clique aqui</router-link>
+          Precisa de acesso de usuário?
+          <router-link to="/" class="link-strong">Clique aqui</router-link>
         </p>
       </footer>
     </div>
@@ -69,80 +62,87 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { userLoginSchema, validateForm, type UserLoginForm } from '@/utils/validation'
 import { BaseInput, BaseButton } from '@/components/ui'
-import { userLogin, type LoginResponse, type ApiError } from '@/api/userApiService'
+import {
+  adminLogin,
+  type AdminLoginForm,
+  type AdminLoginResponse,
+  type ApiError,
+} from '@/api/adminApiService'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
-const formData = reactive<UserLoginForm>({ email: '', password: '' })
+const formData = reactive<AdminLoginForm>({ email: '', password: '' })
 const loading = ref(false)
 const errors = reactive<Record<string, string>>({})
 
 // Check if already logged in when loading the page
 onMounted(() => {
   if (authStore.isAuthenticated) {
-    if (authStore.isAdmin) {
-      router.push('/users/notice')
-    } else {
-      router.push('/users/travel-requests')
-    }
+    router.push('/admin/travel-requests')
   }
 })
 
-const validateField = async (field: keyof UserLoginForm) => {
+const validateField = async (field: keyof AdminLoginForm) => {
   try {
-    await userLoginSchema.validateAt(field, formData)
-    delete errors[field]
+    // Validação simples para admin
+    if (field === 'email' && !formData.email) {
+      errors.email = 'Email é obrigatório'
+    } else if (field === 'password' && !formData.password) {
+      errors.password = 'Senha é obrigatória'
+    } else {
+      delete errors[field]
+    }
   } catch (err: any) {
     errors[field] = err.message
   }
 }
 
 const validateFormData = async () => {
-  const result = await validateForm(userLoginSchema, formData)
-  if (!result.isValid) Object.assign(errors, result.errors)
-  return result.isValid
+  errors.email = formData.email ? '' : 'Email é obrigatório'
+  errors.password = formData.password ? '' : 'Senha é obrigatória'
+
+  return !errors.email && !errors.password
 }
 
-const handleLogin = async () => {
+const handleAdminLogin = async () => {
   Object.keys(errors).forEach(k => delete errors[k])
   const ok = await validateFormData()
   if (!ok) return
 
   loading.value = true
   try {
-    const response: LoginResponse = await userLogin({
+    const response: AdminLoginResponse = await adminLogin({
       email: formData.email,
       password: formData.password,
     })
 
     if (response.success) {
-      authStore.setAuth(response.data.token, response.data.user, false)
-      router.push('/users/travel-requests')
+      authStore.setAuth(response.data.token, response.data.user)
+      router.push('/admin/travel-requests')
     }
   } catch (error: any) {
     const apiError = error as ApiError
-    console.log('Erro capturado no LoginView:', apiError)
+    console.log('Erro capturado no AdminLoginView:', apiError)
 
     if (apiError.errors && Object.keys(apiError.errors).length > 0) {
       Object.keys(apiError.errors).forEach(field => {
         if (field in formData) {
-          errors[field as keyof UserLoginForm] = apiError.errors![field][0]
+          errors[field as keyof AdminLoginForm] = apiError.errors![field][0]
         }
       })
     } else if (apiError.message) {
       errors.general = apiError.message
     } else {
-      errors.general = 'Erro no login. Verifique suas credenciais.'
+      errors.general = 'Erro no login administrativo. Verifique suas credenciais.'
     }
   } finally {
     loading.value = false
   }
 }
 
-const handleBlur = (field: keyof UserLoginForm) => validateField(field)
+const handleBlur = (field: keyof AdminLoginForm) => validateField(field)
 </script>
 
 <style scoped>
@@ -216,43 +216,22 @@ const handleBlur = (field: keyof UserLoginForm) => validateField(field)
   border-radius: 8px;
 }
 
-.register-section {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.register-text {
-  color: #374151;
-  font-size: 14px;
-  margin: 0;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 12px 0 16px;
-}
-
-.link,
 .link-strong {
   color: var(--color-primary);
   text-decoration: none;
+  font-weight: 600;
   font-size: 14px;
 }
-.link:hover,
+
 .link-strong:hover {
   text-decoration: underline;
-}
-.link-strong {
-  font-weight: 600;
 }
 
 .footer {
   padding: 0 28px 28px;
   text-align: center;
 }
+
 .footnote {
   color: #374151;
   font-size: 14px;
@@ -264,6 +243,7 @@ const handleBlur = (field: keyof UserLoginForm) => validateField(field)
   background: var(--color-border);
   margin: 12px 0 10px;
 }
+
 .divider > span {
   position: absolute;
   top: 50%;

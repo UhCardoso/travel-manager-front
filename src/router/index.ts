@@ -1,9 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/auth/LoginView.vue'
 import RegisterView from '../views/auth/RegisterView.vue'
-import AdminLoginView from '../views/admin/AdminLoginView.vue'
+import AdminLoginView from '../views/authAdmin/AdminLoginView.vue'
 import TravelRequests from '../views/users/TravelRequests.vue'
 import CreateTravelRequest from '../views/users/CreateTravelRequest.vue'
+import AdminTravelRequests from '../views/admin/TravelRequests.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,6 +26,12 @@ const router = createRouter({
       name: 'admin-login',
       component: AdminLoginView,
       meta: { title: 'Login de Administrador' },
+    },
+    {
+      path: '/admin/travel-requests',
+      name: 'admin-travel-requests',
+      component: AdminTravelRequests,
+      meta: { title: 'Solicitações de Viagem - Administração' },
     },
     {
       path: '/users/travel-requests',
@@ -54,15 +61,34 @@ router.beforeEach((to, from, next) => {
 
   const hasToken = localStorage.getItem('authToken')
 
-  // If trying to access login/admin-login/register and already logged in, redirect to travel-requests
   if ((to.name === 'home' || to.name === 'admin-login' || to.name === 'register') && hasToken) {
-    next('/users/travel-requests')
+    const userData = localStorage.getItem('userData')
+    if (userData) {
+      try {
+        const user = JSON.parse(userData)
+        if (user.email === 'admin@admin.com') {
+          next('/admin/travel-requests')
+        } else {
+          next('/users/travel-requests')
+        }
+      } catch {
+        next('/users/travel-requests')
+      }
+    } else {
+      next('/users/travel-requests')
+    }
     return
   }
 
   // If trying to access travel-requests or create-travel-request without being logged in, redirect to login
   if ((to.name === 'travel-requests' || to.name === 'create-travel-request') && !hasToken) {
     next('/')
+    return
+  }
+
+  // If trying to access admin-travel-requests without being logged in, redirect to admin login
+  if (to.name === 'admin-travel-requests' && !hasToken) {
+    next('/admin')
     return
   }
 
