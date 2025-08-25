@@ -123,3 +123,19 @@ export const updateTravelRequestStatus = async (
     return handleApiError(error)
   }
 }
+
+// Function to get travel request details for admin
+export const getAdminTravelRequestDetails = async (
+  requestId: number
+): Promise<{ success: boolean; message: string; data: AdminTravelRequest }> => {
+  try {
+    const response = await apiService.get<{
+      success: boolean
+      message: string
+      data: AdminTravelRequest
+    }>(`/admin/travel-request/${requestId}/details`)
+    return response.data
+  } catch (error: any) {
+    return handleApiError(error)
+  }
+}

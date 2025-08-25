@@ -67,7 +67,7 @@
                   <BaseButton
                     variant="outline"
                     size="sm"
-                    :disabled="request.status === 'approved' || request.status === 'cancelled'"
+                    :disabled="request.status === 'approved'"
                     :loading="updatingRequestId === request.id"
                     @click="toggleStatusDropdown(request.id)"
                     class="update-button"
@@ -75,9 +75,15 @@
                     Atualizar Status
                   </BaseButton>
 
-                  <div v-if="openStatusDropdown === request.id" class="status-dropdown">
+                  <div
+                    v-if="
+                      openStatusDropdown === request.id &&
+                      getAvailableStatuses(request.status).length > 0
+                    "
+                    class="status-dropdown"
+                  >
                     <div
-                      v-for="status in availableStatuses"
+                      v-for="status in getAvailableStatuses(request.status)"
                       :key="status.value"
                       class="status-option"
                       @click="updateRequestStatus(request.id, status)"
@@ -197,10 +203,10 @@ import {
   ConfirmationModal,
 } from '@/components/ui'
 import { userLogout } from '@/api/userApiService'
-import { getTravelRequestDetails, type TravelRequest } from '@/api/travelApiService'
 import {
   getAllTravelRequests,
   updateTravelRequestStatus,
+  getAdminTravelRequestDetails,
   type AdminTravelRequest,
 } from '@/api/adminApiService'
 import { useAuthStore } from '@/stores/auth'
@@ -248,11 +254,23 @@ const showStatusModal = ref(false)
 const selectedStatusRequest = ref<AdminTravelRequest | null>(null)
 const selectedStatus = ref<{ value: string; label: string } | null>(null)
 
-// Available statuses for update
-const availableStatuses = [
-  { value: 'approved', label: 'Aprovar' },
-  { value: 'cancelled', label: 'Cancelar' },
-]
+// Get available statuses based on current status
+const getAvailableStatuses = (currentStatus: string) => {
+  if (currentStatus === 'cancelled') {
+    return [{ value: 'approved', label: 'Aprovar' }]
+  } else if (currentStatus === 'pending') {
+    return [
+      { value: 'approved', label: 'Aprovar' },
+      { value: 'cancelled', label: 'Cancelar' },
+    ]
+  } else if (currentStatus === 'rejected') {
+    return [
+      { value: 'approved', label: 'Aprovar' },
+      { value: 'cancelled', label: 'Cancelar' },
+    ]
+  }
+  return []
+}
 
 // Check if logged in when loading the page
 onMounted(() => {
@@ -310,7 +328,7 @@ const handleRowClick = async (request: AdminTravelRequest) => {
 
   try {
     loadingDetails.value = true
-    const response = await getTravelRequestDetails(request.id)
+    const response = await getAdminTravelRequestDetails(request.id)
     if (response.success) {
       selectedRequestDetails.value = response.data as AdminTravelRequest
     } else {
@@ -331,7 +349,7 @@ const loadRequestDetails = async () => {
   try {
     loadingDetails.value = true
     detailsError.value = null
-    const response = await getTravelRequestDetails(selectedRequestDetails.value.id)
+    const response = await getAdminTravelRequestDetails(selectedRequestDetails.value.id)
     if (response.success) {
       selectedRequestDetails.value = response.data as AdminTravelRequest
     } else {
@@ -353,6 +371,12 @@ const closeDetailsModal = () => {
 
 // Toggle status dropdown
 const toggleStatusDropdown = (requestId: number) => {
+  const request = travelRequests.value.find(r => r.id === requestId)
+  if (!request) return
+
+  const availableStatuses = getAvailableStatuses(request.status)
+  if (availableStatuses.length === 0) return
+
   if (openStatusDropdown.value === requestId) {
     openStatusDropdown.value = null
   } else {
